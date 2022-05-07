@@ -55,7 +55,7 @@ int main() {
 	}
 	pidm = getpid();
 	strcpy(RootPath, RootWorkPath);
-	strcat(RootPath, "/history.txt");
+	strcat(RootPath, "/.history");
 	//printf("%s", RootPath);
 
 	// store the history 
@@ -149,7 +149,7 @@ int main() {
 		 
 		k = 0;
 		for(j = 0; j < i; j++){
-			if(*(args[j]) == '|') {
+			if(*(args[j]) == '|' || *(args[j]) == '$') {
 				k = 1;
 			}
 		}
@@ -345,7 +345,7 @@ int execute_single_command(char **args){
 	// export
 	if (strcmp(args[0], "export") == 0) {
 		for (i = 1; args[i] != NULL; i++) {
-			/*处理每个变量*/
+			// handle every args
 			char *name = args[i];
 			char *value = args[i]+ 1;
 			while (*value != '\0' && *value != '=')
