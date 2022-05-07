@@ -559,9 +559,9 @@ int execute_with_redirection(char **args){
 			else freopen(InFile, "r", stdin);
 		}
 		if (tcp_flag[1])
-			printf("Out Part:\nIP:%s,port:%d\n", IP_out, port_out);
+			printf("Out Part:\nIP:%s port:%d\n", IP_out, port_out);
 		if (tcp_flag[0])
-			printf("In Part:\nIP:%s,port:%d\n", IP_in,  port_in );
+			printf("In Part:\nIP:%s port:%d\n", IP_in,  port_in );
 		if ((counter[0] + counter[1]) && !Cover)
 			freopen(OutFile, "a", stdout);
 		if ((counter[0] + counter[1]) && Cover){
