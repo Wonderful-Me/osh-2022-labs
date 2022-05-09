@@ -412,19 +412,19 @@ int execute_top_function(char **args) {
 	int i,status;
 	pid_t pid;
 	int fd[2],sfd;
-	// save the STDIN so that ew can reload it after executed the whole instruction
-	// actually, dup(STDIN_FILENO) is the same as fcntl(STDIN_FILENO, F_DUPFD, 0)
-	// we have to make sure that all the FILENO is restored to present the unexpected bugs
-	// the bug is caused because we change the ptr field of STD*_FILENO (an analogy) 
 	sfd = dup(STDIN_FILENO); 
 	for (i = 0; args[i] && *args[i]!='|'; i++) ;
 	if (args[i]) {
 		// change the '|' to NULL
 		args[i] = NULL;
 		/*
+
+		Learning Note:
+
 		int pipe(int fd[2]);
-		success return 0
-		failed return -1
+
+		success return 0	failed return -1
+
 		*/
 		int ret = pipe(fd);
 		if(ret == -1) {
@@ -458,15 +458,21 @@ int execute_top_function(char **args) {
 
 
 // execute_with_redirection function
-// detect and deal with the symbol character: '>', '>>', '<'
-// try to achieve the connection to server
-// can handle command like: /dev/stdin, /dev/stdout, /dev/stderr etc
+/*
+	detect and deal with the symbol character: '>', '>>', '<'
+
+	connecte to server, deal with command like: /dev/stdin, /dev/stdout, /dev/stderr etc
+*/
 int execute_with_redirection(char **args){
 	int i, j;
 	// to cover the file or not
 	int Cover;
 	int port_in, port_out, s_in, s_out;
+	
+	// counter[0], counter[1], counter[2] for '>', '>>', '<'
 	int counter[3] = {0, 0, 0};
+
+	// tcp_flag[0], tcp_flag[1] for '<' and tcp detected, '>' and tcp detected
 	int tcp_flag[2] = {0,0};	
 	char *InFile, *OutFile;
 	char cmp_string[10];
