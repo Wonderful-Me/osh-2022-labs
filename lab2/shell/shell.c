@@ -42,6 +42,7 @@ int main() {
 	int i, j, k, m, num, status;
 	int ch;
 	char temp[MAX_INPUT_LENGTH];
+	char temp1[MAX_INPUT_LENGTH];
 	char env[MAX_INPUT_LENGTH];
 	char *args[MAX_INPUT_ARGS]; 	// define a string* array - each block represent a word (after seperation)
 	char cmd[MAX_INPUT_LENGTH];
@@ -128,6 +129,7 @@ int main() {
 			}
 		}	
 
+
 		// analyse the command
 		int i;
 
@@ -154,11 +156,24 @@ int main() {
 			}
 		}
 		
+		// store the history
+		// the history command itself won't be saved
+		pidt = getpid();
+		if(pidt == pidm) {
+			m++;
+			fwrite(&m, sizeof(int), 1, fp);
+			fwrite(temp, MAX_INPUT_LENGTH*sizeof(char), 1, fp);
+		}
+		fclose(fp);
+		fp = fopen(RootPath, "rb+");
+		fseek(fp, (sizeof(int)+m*(sizeof(int)+MAX_INPUT_LENGTH*sizeof(char))), 0);
+
 
 		// a series of history command
 		int number;
 		if (strcmp(args[0], "history") == 0) {
 			FILE* rd = fopen(RootPath, "r");
+			rewind(rd);
 			fread(&number, sizeof(int), 1, rd);
 			int low = chartoint(args[1]);
 			for(int x = 0; x <= m-1; x++) {
@@ -174,11 +189,14 @@ int main() {
 		if (args[0][0] == '!') {
 			if(args[0][1] == '!') {
 				FILE* rd = fopen(RootPath, "r");
+				rewind(rd);
 				fread(&number, sizeof(int), 1, rd);
 				for(int x = 0; x <= m-1; x++) {
 					fread(&number, sizeof(int), 1, rd);
 					fread(temp, MAX_INPUT_LENGTH*sizeof(char), 1, rd);
-					if(x == m-1) {
+					if(x == m-2) {
+						fseek(fp, -(sizeof(int)+MAX_INPUT_LENGTH*sizeof(char)), 1);
+						m--;
 						printf("%s\n", temp);
 						fclose(rd);
 						strcpy(cmd, temp);
@@ -198,26 +216,20 @@ int main() {
 					fread(temp, MAX_INPUT_LENGTH*sizeof(char), 1, rd);
 					if(x == nm-1) {
 						printf("%s\n", temp);
-						fclose(rd);
 						strcpy(cmd, temp);
+						strcpy(temp1, temp);
+					}
+					if(x == m-2) {
+						fseek(fp, -(sizeof(int)+MAX_INPUT_LENGTH*sizeof(char)), 1);
+						m--;
+						strcpy(temp, temp1);
+						fclose(rd);
 						goto here;
 					}
 				}
         		}
 		}
-	
 
-		// store the history
-		// the history command itself won't be saved
-		pidt = getpid();
-		if(pidt == pidm) {
-			m++;
-			fwrite(&m, sizeof(int), 1, fp);
-			fwrite(temp, MAX_INPUT_LENGTH*sizeof(char), 1, fp);
-		}
-		fclose(fp);
-		fp = fopen(RootPath, "rb+");
-		fseek(fp, (sizeof(int)+m*(sizeof(int)+MAX_INPUT_LENGTH*sizeof(char))), 0);	
 
 
 		if(k == 0) {
