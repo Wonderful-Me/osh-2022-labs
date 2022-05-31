@@ -6,8 +6,9 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define BUF 1048600
+#define BUF 2048
 #define MAX_USERS 32
+#define MAX_MESGS 56
 
 struct Info {
 	int fd_recv;
@@ -21,7 +22,7 @@ struct Send {
 	char msg[1048600];
 };
 
-struct Send sd[MAX_USERS][32];
+struct Send sd[MAX_USERS][MAX_MESGS];
 
 int p[MAX_USERS], q[MAX_USERS];
 
@@ -32,21 +33,21 @@ int is_empty(int i) {
 }
 
 int is_full(int i) {
-	if((q[i]+1)%32 == p[i])
+	if((q[i]+1) % MAX_MESGS == p[i])
 		return 1;
 	else return 0;
 }
 
 void Enqueue(int i, struct Send in) {
 	if(!is_full(i)) {
-		q[i] = (q[i] + 1) % 32;
+		q[i] = (q[i] + 1) % MAX_MESGS;
 		sd[i][q[i]] = in;
 	}
 }
 
 struct Send Dequeue(int i) {
 	if(!is_empty(i)) {
-		p[i] = (p[i] + 1) % 32;
+		p[i] = (p[i] + 1) % MAX_MESGS;
 		return sd[i][p[i]];
 	}
 }

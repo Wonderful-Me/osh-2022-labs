@@ -12,8 +12,8 @@
 #define MAX_MSG 1048600
 #define MAX_USERS 32
 
-int used[MAX_USERS] = { 0 };
-int client[MAX_USERS] = { 0 };
+int used[MAX_USERS];
+int client[MAX_USERS];
 
 char msg[MAX_MSG] = "";
 
@@ -79,6 +79,9 @@ int main(int argc, char** argv) {
 		perror("socket");
 		return 1;
 	}
+
+	memset(used, 0, sizeof(used));
+	memset(client, 0, sizeof(client));
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
