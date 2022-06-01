@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 
+#define BUF_LENGTH 2048
 #define MAX_MSG 1048600
 #define MAX_USERS 32
 
@@ -17,7 +18,7 @@ int client[MAX_USERS];
 char msg[MAX_MSG] = "";
 
 void handle_chat(int id) {
-	char buffer[MAX_MSG];
+	char buffer[BUF_LENGTH];
 	ssize_t len;
 	int start = 8;
 	int first_recv = 1;
@@ -25,7 +26,7 @@ void handle_chat(int id) {
 	sprintf(msg, "user%2d: ", id);
 
 	while (1) {
-		len = recv(client[id], buffer, MAX_MSG - 12, 0);
+		len = recv(client[id], buffer, BUF_LENGTH - 12, 0);
 		if (len <= 0) {
 			if (first_recv) {
 				used[id] = 0;
