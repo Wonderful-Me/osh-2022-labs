@@ -8,7 +8,6 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 
-#define BUF 1048600
 #define MAX_MSG 1048600
 #define MAX_USERS 32
 
@@ -18,7 +17,7 @@ int client[MAX_USERS];
 char msg[MAX_MSG] = "";
 
 void handle_chat(int id) {
-	char buffer[BUF];
+	char buffer[MAX_MSG];
 	ssize_t len;
 	int start = 8;
 	int first_recv = 1;
@@ -26,7 +25,7 @@ void handle_chat(int id) {
 	sprintf(msg, "user%2d: ", id);
 
 	while (1) {
-		len = recv(client[id], buffer, BUF - 12, 0);
+		len = recv(client[id], buffer, MAX_MSG - 12, 0);
 		if (len <= 0) {
 			if (first_recv) {
 				used[id] = 0;
@@ -45,7 +44,7 @@ void handle_chat(int id) {
 				num = i - tag + 1;
 				strncpy(msg + start, buffer + tag, num);
 
-				for (j = 0;j < MAX_USERS;j++) {
+				for (j = 0; j < MAX_USERS; j++) {
 					if (used[j] && j != id) {
 						int remain = start + num;
 						int sended = 0;
@@ -63,6 +62,7 @@ void handle_chat(int id) {
 				start = 8;
 			}
 		}
+		// restore the remain message
 		if (tag != len) {
 			num = len - tag;
 			strncpy(msg + start, buffer + tag, num);
@@ -121,12 +121,14 @@ int main(int argc, char** argv) {
 					return 1;
 				}
 
+				// set to non_block
 				fcntl(new_client, F_SETFL, fcntl(new_client, F_GETFL, 0) | O_NONBLOCK);
 
 				if (sfd < new_client) {
 					sfd = new_client;
 				}
 
+				// new client
 				for (i = 0; i < MAX_USERS; i++) {
 					if (!used[i]) {
 						used[i] = 1;
