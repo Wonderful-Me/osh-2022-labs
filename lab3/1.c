@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define DEFAULT_LENGTH 1024
+#define DEFAULT_LENGTH 1048600
 
 struct Pipe {
 	int fd_send;
