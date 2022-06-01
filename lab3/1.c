@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define DEFAULT_LENGTH 1048600
+#define BUF_LENGTH 1024
 
 struct Pipe {
 	int fd_send;
@@ -16,7 +16,7 @@ struct Pipe {
 void* handle_chat(void* data) {
 	struct Pipe* pipe = (struct Pipe*)data;
 	char msg[1048600] = "Message: ";
-	char buffer[DEFAULT_LENGTH];
+	char buffer[BUF_LENGTH];
 	ssize_t len;
 	int i, tag, num, remain, sended_length;
 	int start = 9;
@@ -24,7 +24,7 @@ void* handle_chat(void* data) {
 	while (1) {
 
 		// recv's return value: the length of content received
-		len = recv(pipe->fd_send, buffer, DEFAULT_LENGTH - 12, 0);
+		len = recv(pipe->fd_send, buffer, BUF_LENGTH - 12, 0);
 		tag = 0;
 		num = 0;
 		for (i = 0; i < len; i++) {
@@ -32,14 +32,14 @@ void* handle_chat(void* data) {
 				num = i - tag + 1;
 				strncpy(msg + start, buffer + tag, num);
 				remain = start + num;
-				sended = 0;
+				sended_length = 0;
 				while (remain > 0) {
-					sended = send(pipe->fd_recv, msg + sended, remain, 0);
-					if (sended == -1) {
+					sended_length = send(pipe->fd_recv, msg + sended_length, remain, 0);
+					if (sended_length == -1) {
 						perror("send");
 						exit(-1);
 					}
-					remain = remain - sended;
+					remain = remain - sended_length;
 				}
 				tag = i + 1;
 				start = 9;
