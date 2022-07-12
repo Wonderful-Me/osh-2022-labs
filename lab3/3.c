@@ -8,7 +8,7 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 
-#define BUF_LENGTH 2048
+#define BUF_LENGTH 1048600
 #define MAX_MSG 1048600
 #define MAX_USERS 32
 
@@ -20,55 +20,70 @@ char msg[MAX_MSG] = "";
 void handle_chat(int id) {
 	char buffer[BUF_LENGTH];
 	ssize_t len;
-	int start = 8;
-	int first_recv = 1;
-
-	sprintf(msg, "user%2d: ", id);
-
+	int symb, first = 1;
+	int i, j;
+	int num = 0;
+	int sended_length = 0;
+	int left = 0;
 	while (1) {
+		// recv's return value: the length of content received	
 		len = recv(client[id], buffer, BUF_LENGTH - 12, 0);
 		if (len <= 0) {
-			if (first_recv) {
+			if (first) {
 				used[id] = 0;
 				close(client[id]);
 				return;
 			}
 			return;
 		}
-		first_recv = 0;
+		else first = 0;
 
-		int i, j;
-		int tag = 0;
-		int num = 0;
+
 		for (i = 0; i < len; i++) {
 			if (buffer[i] == '\n') {
-				num = i - tag + 1;
-				strncpy(msg + start, buffer + tag, num);
-
+				msg[num] = buffer[i];
+				num++;
 				for (j = 0; j < MAX_USERS; j++) {
+					left = num;
+					sended_length = 0;
 					if (used[j] && j != id) {
-						int remain = start + num;
-						int sended = 0;
-						while (remain > 0) {
-							sended = send(client[j], msg + sended, remain, 0);
-							if (sended == -1) {
-								perror("send");
-								exit(-1);
-							}
-							remain -= sended;
+						while (sended_length < num) {
+							sended_length += send(client[j], msg + sended_length, left, 0);
+							left = num - sended_length;
 						}
 					}
 				}
-				tag = i + 1;
-				start = 8;
+				num = 0;
+			}
+			else {
+				msg[num] = buffer[i];
+				num++;
 			}
 		}
-		// restore the remain message
-		if (tag != len) {
-			num = len - tag;
-			strncpy(msg + start, buffer + tag, num);
-			start = start + num;
+
+		// detect if there's message remaining
+		if(i == len) 
+			symb = 0;
+		else symb = 1;
+		
+		if (symb) {
+			// last msg remaining
+			if (len < BUF_LENGTH - 12) {
+				for (j = 0; j < MAX_USERS; j++) {
+					left = num;
+					sended_length = 0;
+					if (used[j] && j != id) {
+						while (sended_length < num) {
+							sended_length += send(client[j], msg + sended_length, left, 0);
+							left = num - sended_length;
+						}
+					}
+				}
+				num = 0;
+			}
+			else { } // do nothing
 		}
+		else { } // do nothing
 	}
 	return;
 }
@@ -107,13 +122,12 @@ int main(int argc, char** argv) {
 		// set zero
 		FD_ZERO(&fds);
 		FD_SET(fd, &fds);
-		for (i = 0;i < MAX_USERS;i++) {
+		for (i = 0;i < MAX_USERS;i++)
 			if (used[i])
 				FD_SET(client[i], &fds);
-		}
 		
 		// check if it's readable
-		//  maxfdp: sfd + 1 ——传入参数，集合中所有文件描述符的范围，即最大文件描述符值+1
+		//  maxfdp: sfd + 1 —— 传入参数，集合中所有文件描述符的范围，即最大文件描述符值+1
 		if (select(sfd + 1, &fds, NULL, NULL, NULL) > 0) {
 			if (FD_ISSET(fd, &fds)) {
 				int new_client = accept(fd, NULL, NULL);
