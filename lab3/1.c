@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
-#define BUF_LENGTH 1024
+#define BUF_LENGTH 1048576
 
 struct Pipe {
 	int fd_send;
@@ -15,41 +15,61 @@ struct Pipe {
 
 void* handle_chat(void* data) {
 	struct Pipe* pipe = (struct Pipe*)data;
-	char msg[1048600] = "Message: ";
+	char msg[BUF_LENGTH];
 	char buffer[BUF_LENGTH];
-	ssize_t len;
-	int i, tag, num, remain, sended_length;
-	int start = 9;
-
+	memset(msg, 0, sizeof(msg));
+	memset(buffer, 0, sizeof(buffer));
+	ssize_t len = 0;
+	int i, tag, num, left, sended_length, symb, start;
+	start = 0;
+	symb = 0;	
+	tag = 0; 
+	num = 0;
+	left = 0;
 	while (1) {
-
 		// recv's return value: the length of content received
 		len = recv(pipe->fd_send, buffer, BUF_LENGTH - 12, 0);
-		tag = 0;
-		num = 0;
 		for (i = 0; i < len; i++) {
 			if (buffer[i] == '\n') {
-				num = i - tag + 1;
-				strncpy(msg + start, buffer + tag, num);
-				remain = start + num;
+				msg[num] = buffer[i];
+				num++;
+				left = start + num;
 				sended_length = 0;
-				while (remain > 0) {
-					sended_length = send(pipe->fd_recv, msg + sended_length, remain, 0);
-					if (sended_length == -1) {
-						perror("send");
-						exit(-1);
-					}
-					remain = remain - sended_length;
+				while (left > 0) {
+					sended_length = send(pipe->fd_recv, msg + sended_length, left, 0);
+					left = left - sended_length;
 				}
 				tag = i + 1;
-				start = 9;
+				start = 0;
+				num = 0;
+			}
+			else {
+				msg[num] = buffer[i];
+				num++;
 			}
 		}
-		if (tag != len) {
-			num = len - tag;
-			strncpy(msg + start, buffer + tag, num);
-			start = start + num;
+
+		// detect if there's message remaining
+		if(tag == len) 
+			symb = 0;
+		else symb = 1;
+
+		if (symb) {
+			// last msg remaining
+			if (len < BUF_LENGTH - 12) {
+				left = start + num;
+				sended_length = 0;
+				while (left > 0) {
+					sended_length = send(pipe->fd_recv, msg + sended_length, left, 0);
+					left = left - sended_length;
+				}
+				tag = 0;
+				start = 0;
+				num = 0;
+			}
+			else { } // do nothing
 		}
+		else { } // do nothing
 	}
 	return NULL;
 }
@@ -88,7 +108,6 @@ int main(int argc, char** argv) {
 	pthread_t thread1, thread2;
 	struct Pipe pipe1;
 	struct Pipe pipe2;
-
 	pipe1.fd_send = fd1;
 	pipe1.fd_recv = fd2;
 	pipe2.fd_send = fd2;
