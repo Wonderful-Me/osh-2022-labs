@@ -20,8 +20,7 @@ void* handle_chat(void* data) {
 	memset(msg, 0, sizeof(msg));
 	memset(buffer, 0, sizeof(buffer));
 	ssize_t len = 0;
-	int i, tag, num, left, sended_length, symb, start;
-	start = 0;
+	int i, tag, num, left, sended_length, symb;
 	symb = 0;	
 	tag = 0; 
 	num = 0;
@@ -33,14 +32,13 @@ void* handle_chat(void* data) {
 			if (buffer[i] == '\n') {
 				msg[num] = buffer[i];
 				num++;
-				left = start + num;
+				left = num;
 				sended_length = 0;
-				while (left > 0) {
-					sended_length = send(pipe->fd_recv, msg + sended_length, left, 0);
-					left = left - sended_length;
+				while (sended_length < num) {
+					sended_length += send(pipe->fd_recv, msg + sended_length, left, 0);
+					left = num - sended_length;
 				}
 				tag = i + 1;
-				start = 0;
 				num = 0;
 			}
 			else {
@@ -57,14 +55,13 @@ void* handle_chat(void* data) {
 		if (symb) {
 			// last msg remaining
 			if (len < BUF_LENGTH - 12) {
-				left = start + num;
+				left = num;
 				sended_length = 0;
-				while (left > 0) {
-					sended_length = send(pipe->fd_recv, msg + sended_length, left, 0);
-					left = left - sended_length;
+				while (sended_length < num) {
+					sended_length += send(pipe->fd_recv, msg + sended_length, left, 0);
+					left = num - sended_length;
 				}
 				tag = 0;
-				start = 0;
 				num = 0;
 			}
 			else { } // do nothing
