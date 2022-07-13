@@ -14,8 +14,36 @@
 
 int used[MAX_USERS];
 int client[MAX_USERS];
-
 char msg[MAX_MSG] = "";
+fd_set fds;
+int sfd, fd;
+
+int clients_initialize() {
+	// set zero
+	FD_ZERO(&fds);
+	FD_SET(fd, &fds);
+	for (int i = 0;i < MAX_USERS;i++) {
+		if (used[i]) {
+			if (sfd < client[i]) 
+				sfd = client[i];
+			FD_SET(client[i], &fds);
+		}
+	}
+	return 1;
+}
+
+int add_client(int new_client) {
+	for (int i = 0; i < MAX_USERS; i++) {
+		if (used[i])
+			continue; 
+		else {
+			used[i] = 1;
+			client[i] = new_client;
+			return 1;
+		}
+	}
+	return 0;
+}
 
 void handle_chat(int id) {
 	char buffer[BUF_LENGTH];
@@ -88,16 +116,19 @@ void handle_chat(int id) {
 	return;
 }
 
+int handle_msg() {
+	for (int i = 0;i < MAX_USERS;i++)
+		if (used[i])
+			if (FD_ISSET(client[i], &fds))
+				handle_chat(i);
+}
+
 int main(int argc, char** argv) {
 	int port = atoi(argv[1]);
-	int fd;
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
 		perror("socket");
 		return 1;
 	}
-
-	memset(used, 0, sizeof(used));
-	memset(client, 0, sizeof(client));
 
 	struct sockaddr_in addr;
 	addr.sin_family = AF_INET;
@@ -115,48 +146,30 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	int i;
-	int sfd = fd;
-	fd_set fds;
+	int i, flag, ret;
+	sfd = fd;
+	int new_client;
+
+	memset(used, 0, sizeof(used));
+	memset(client, 0, sizeof(client));
 	while (1) {
-		// set zero
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		for (i = 0;i < MAX_USERS;i++)
-			if (used[i])
-				FD_SET(client[i], &fds);
-		
-		// check if it's readable
-		//  maxfdp: sfd + 1 —— 传入参数，集合中所有文件描述符的范围，即最大文件描述符值+1
-		if (select(sfd + 1, &fds, NULL, NULL, NULL) > 0) {
-			if (FD_ISSET(fd, &fds)) {
-				int new_client = accept(fd, NULL, NULL);
-				if (new_client == -1) {
-					perror("accept");
-					return 1;
+		ret = clients_initialize();
+		if(ret) {
+			// check if it's readable
+			//  maxfdp: sfd + 1 —— 传入参数，集合中所有文件描述符的范围，即最大文件描述符值+1
+			flag = select(sfd + 1, &fds, NULL, NULL, NULL);
+			if (flag) {
+				ret = FD_ISSET(fd, &fds);
+				if (ret) {
+					new_client = accept(fd, NULL, NULL);
+					// set to non_block
+					fcntl(new_client, F_SETFL, fcntl(new_client, F_GETFL, 0) | O_NONBLOCK);
+					// new client
+					int rt = add_client(new_client);
+					if(!rt)
+						printf("failed to add a new client!");
 				}
-
-				// set to non_block
-				fcntl(new_client, F_SETFL, fcntl(new_client, F_GETFL, 0) | O_NONBLOCK);
-
-				if (sfd < new_client) {
-					sfd = new_client;
-				}
-
-				// new client
-				for (i = 0; i < MAX_USERS; i++) {
-					if (!used[i]) {
-						used[i] = 1;
-						client[i] = new_client;
-						break;
-					}
-				}
-			}
-			else {
-				for (i = 0;i < MAX_USERS;i++) {
-					if (used[i] && FD_ISSET(client[i], &fds))
-						handle_chat(i);
-				}
+				else handle_msg();
 			}
 		}
 	}
