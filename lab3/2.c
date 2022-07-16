@@ -68,15 +68,13 @@ void* send_msg(void* x) {
 			pthread_mutex_unlock(&mutex[i]);
 			int remain = in.remain;
 			int client = in.clt;
-			strncpy(msg, in.msg, 1048600);
-			int sended = 0;
-			while (remain > 0) {
-				sended = send(client, msg + sended, remain, 0);
-				if (sended == -1) {
-					perror("send");
-					exit(-1);
-				}
-				remain = remain - sended;
+			int num = in.remain;
+			for(int k = 0; k < 1048600; k++)
+				msg[k] = in.msg[k];
+			int sended_length = 0;
+			while (sended_length < num) {
+				sended_length += send(client, msg + sended_length, remain, 0);
+				remain = num - sended_length;
 			}
 		}
 	}
@@ -88,11 +86,9 @@ void* handle_chat(void* data) {
 	struct Send inn;
 	char buffer[BUF];
 	ssize_t len;
-	int start = 8;
-	int i, j, num, remain;
-	int tag = 0;
+	int i, j, symb;
+	int tag = 0, num = 0;
 	char msg[1048600] = "";
-	sprintf(msg,"user%2d: ", info->myid);
 	while (1) {
 
 		len = recv(info->fd_recv, buffer, BUF - 12, 0);
@@ -103,36 +99,59 @@ void* handle_chat(void* data) {
 			return 0;
 		}
 
-		tag = 0;
-		num = 0;
 		for (i = 0; i < len; i++) {
 			if (buffer[i] == '\n') {
-				num = i - tag + 1;
-				strncpy(msg + start, buffer + tag, num);
-
+				msg[num] = buffer[i];
+				num++;
 				for (j = 0; j < MAX_USERS; j++) {
 					if (used[j] && j != info->myid) {
 						pthread_mutex_lock(&mutex[j]);
-						remain = start + num;
 						inn.ori = info->myid;
 						inn.clt = client[j];
-						inn.remain = remain;
-						strncpy(inn.msg, msg, 1048600);
-						// printf("%s\n", msg);
+						inn.remain = num;
+						memset(inn.msg, 0, sizeof(inn.msg));
+						for(int k = 0; k < 1048600; k++)
+							inn.msg[k] = msg[k];
 						Enqueue(j, inn);
 						pthread_mutex_unlock(&mutex[j]);
 					}
 				}
-
+				num = 0;
 				tag = i + 1;
-				start = 8;
+				memset(msg, 0, sizeof(msg));
+			}
+			else {
+				msg[num] = buffer[i];
+				num++;
 			}
 		}
-		if (tag != len) {
-			num = len - tag;
-			strncpy(msg + start, buffer + tag, num);
-			start = start + num;
+		// detect if there's message remaining
+		if(tag == len) 
+			symb = 0;
+		else symb = 1;
+
+		if (symb) {
+			// last msg remaining
+			if (len < BUF - 12) {
+				for (j = 0; j < MAX_USERS; j++) {
+					if (used[j] && j != info->myid) {
+						pthread_mutex_lock(&mutex[j]);
+						inn.ori = info->myid;
+						inn.clt = client[j];
+						inn.remain = num;
+						memset(inn.msg, 0, sizeof(inn.msg));
+						for(int k = 0; k < 1048600; k++)
+							inn.msg[k] = msg[k];
+						Enqueue(j, inn);
+						pthread_mutex_unlock(&mutex[j]);
+					}
+				}
+				num = 0;
+				memset(msg, 0, sizeof(msg));
+			}
+			else { } // do nothing
 		}
+		else { } // do nothing
 	}
 	return NULL;
 }
@@ -182,10 +201,6 @@ int main(int argc, char** argv) {
 				pthread_create(&thread[i], NULL, handle_chat, (void*)&info[i]);
 				break;
 			}
-		}
-		if (i == MAX_USERS) {
-			perror("MAX_USERS");
-			return 1;
 		}
 	}
 	return 0;

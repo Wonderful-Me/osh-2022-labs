@@ -20,7 +20,8 @@ void* handle_chat(void* data) {
 	memset(msg, 0, sizeof(msg));
 	memset(buffer, 0, sizeof(buffer));
 	ssize_t len = 0;
-	int i, num, left, sended_length, symb;
+	int i, num, left, sended_length, symb, tag;
+	tag = 0;
 	symb = 0;	 
 	num = 0;
 	left = 0;
@@ -38,6 +39,8 @@ void* handle_chat(void* data) {
 					left = num - sended_length;
 				}
 				num = 0;
+				tag = i + 1;
+				memset(msg, 0, sizeof(msg));
 			}
 			else {
 				msg[num] = buffer[i];
@@ -46,7 +49,7 @@ void* handle_chat(void* data) {
 		}
 
 		// detect if there's message remaining
-		if(i == len) 
+		if(tag == len) 
 			symb = 0;
 		else symb = 1;
 
@@ -60,6 +63,7 @@ void* handle_chat(void* data) {
 					left = num - sended_length;
 				}
 				num = 0;
+				memset(msg, 0, sizeof(msg));
 			}
 			else { } // do nothing
 		}

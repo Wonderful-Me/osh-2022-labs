@@ -49,7 +49,7 @@ void handle_chat(int id) {
 	char buffer[BUF_LENGTH];
 	ssize_t len;
 	int symb, first = 1;
-	int i, j;
+	int i, j, sig;
 	int num = 0;
 	int sended_length = 0;
 	int left = 0;
@@ -81,6 +81,8 @@ void handle_chat(int id) {
 						}
 					}
 				}
+				memset(msg, 0, sizeof(msg));
+				sig = i + 1;
 				num = 0;
 			}
 			else {
@@ -90,7 +92,7 @@ void handle_chat(int id) {
 		}
 
 		// detect if there's message remaining
-		if(i == len) 
+		if(sig == len) 
 			symb = 0;
 		else symb = 1;
 		
@@ -107,6 +109,7 @@ void handle_chat(int id) {
 						}
 					}
 				}
+				memset(msg, 0, sizeof(msg));
 				num = 0;
 			}
 			else { } // do nothing
@@ -152,11 +155,11 @@ int main(int argc, char** argv) {
 
 	memset(used, 0, sizeof(used));
 	memset(client, 0, sizeof(client));
+
 	while (1) {
 		ret = clients_initialize();
 		if(ret) {
 			// check if it's readable
-			//  maxfdp: sfd + 1 —— 传入参数，集合中所有文件描述符的范围，即最大文件描述符值+1
 			flag = select(sfd + 1, &fds, NULL, NULL, NULL);
 			if (flag) {
 				ret = FD_ISSET(fd, &fds);
