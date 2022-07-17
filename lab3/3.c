@@ -23,9 +23,10 @@ int clients_initialize() {
 	FD_ZERO(&fds);
 	FD_SET(fd, &fds);
 	for (int i = 0;i < MAX_USERS;i++) {
-		if (used[i]) {
-			if (sfd < client[i]) 
-				sfd = client[i];
+		if (!used[i])
+			continue;
+		else {
+			sfd = (sfd >= client[i]) ? sfd: client[i];
 			FD_SET(client[i], &fds);
 		}
 	}
@@ -56,16 +57,14 @@ void handle_chat(int id) {
 	while (1) {
 		// recv's return value: the length of content received	
 		len = recv(client[id], buffer, BUF_LENGTH - 12, 0);
-		if (len <= 0) {
-			if (first) {
-				used[id] = 0;
-				close(client[id]);
-				return;
-			}
+		if (len <= 0 && first) {
+			used[id] = 0;
+			close(client[id]);
 			return;
 		}
-		else first = 0;
-
+		else if(len <= 0) 
+			return;
+		first = 0;
 
 		for (i = 0; i < len; i++) {
 			if (buffer[i] == '\n') {
@@ -144,7 +143,7 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 
-	if (listen(fd, MAX_USERS)) {
+	if (listen(fd, 32)) {
 		perror("listen");
 		return 1;
 	}
